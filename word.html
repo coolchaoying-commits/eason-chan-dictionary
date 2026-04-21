@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>詞條 · 陳奕迅詞典</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css?v=20260421i">
+</head>
+<body>
+  <header class="page-header">
+    <a class="back-link" href="index.html">‹ 返回目錄</a>
+    <span class="page-brand"><span class="seal-mini">歌</span> 陳奕迅詞典</span>
+  </header>
+
+  <main class="book">
+    <article id="entry" class="entry"></article>
+
+    <nav class="entry-nav">
+      <a id="prev" class="nav-prev" href="#">‹ 上一首</a>
+      <a id="next" class="nav-next" href="#">下一首 ›</a>
+    </nav>
+  </main>
+
+  <script src="data.js"></script>
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const id = params.get("id");
+      const idx = SONGS.findIndex(s => s.id === id);
+      const entryEl = document.getElementById("entry");
+
+      if (idx === -1) {
+        entryEl.innerHTML = `<p class="empty">沒有找到這首歌。<a href="index.html">回到目錄</a></p>`;
+        return;
+      }
+
+      const s = SONGS[idx];
+      document.title = `${s.song} · 陳奕迅詞典`;
+
+      const layerOrder = ["原义", "歌词义", "人话版"];
+      const sortedDefs = [...s.definitions].sort(
+        (a, b) => layerOrder.indexOf(a.layer) - layerOrder.indexOf(b.layer)
+      );
+
+      const defsHtml = sortedDefs.map((d, i) => {
+        const isMuggle = d.layer === "人话版";
+        return `
+          <div class="def ${isMuggle ? "def-muggle-block" : ""}">
+            <div class="def-layer">${d.layer}</div>
+            <div class="def-body">
+              <p class="def-gloss">${d.gloss}</p>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      const lyricsHtml = (s.lyrics || []).map(ly => `
+        <div class="lyric">
+          <p class="ly-line">「${ly.line}」</p>
+          ${ly.why ? `<p class="ly-why"><span class="why-label">何以入心</span>${ly.why}</p>` : ""}
+        </div>
+      `).join("");
+
+      const c = s.credits || {};
+      const creditsItems = [];
+      if (c.lyricist) creditsItems.push(`<span><em>詞</em>${c.lyricist}</span>`);
+      if (c.composer) creditsItems.push(`<span><em>曲</em>${c.composer}</span>`);
+      if (c.album) creditsItems.push(`<span><em>輯</em>《${c.album}》</span>`);
+      if (c.year) creditsItems.push(`<span><em>年</em>${c.year}</span>`);
+
+      entryEl.innerHTML = `
+        <div class="entry-head">
+          <div class="entry-jyutping">${s.jyutping}</div>
+          <h1 class="entry-song">${s.song}</h1>
+          <div class="entry-meta">
+            <button class="audio-btn" data-src="${s.audio || ""}" title="播放粵語讀音">🔊</button>
+          </div>
+        </div>
+
+        <section class="entry-section">
+          <h3 class="section-label">釋義</h3>
+          ${defsHtml}
+        </section>
+
+        ${lyricsHtml ? `
+          <section class="entry-section">
+            <h3 class="section-label">金句</h3>
+            ${lyricsHtml}
+          </section>
+        ` : ""}
+
+        ${creditsItems.length ? `
+          <section class="entry-section credits-section">
+            <h3 class="section-label">出處</h3>
+            <div class="credits">${creditsItems.join("")}</div>
+          </section>
+        ` : ""}
+
+        ${s.note ? `
+          <section class="entry-section">
+            <h3 class="section-label">注</h3>
+            <p class="entry-note">${s.note}</p>
+          </section>
+        ` : ""}
+      `;
+
+      const prev = SONGS[(idx - 1 + SONGS.length) % SONGS.length];
+      const next = SONGS[(idx + 1) % SONGS.length];
+      document.getElementById("prev").href = `word.html?id=${encodeURIComponent(prev.id)}`;
+      document.getElementById("prev").innerHTML = `‹ ${prev.song}`;
+      document.getElementById("next").href = `word.html?id=${encodeURIComponent(next.id)}`;
+      document.getElementById("next").innerHTML = `${next.song} ›`;
+
+      const audioBtn = entryEl.querySelector(".audio-btn");
+      if (audioBtn) {
+        audioBtn.addEventListener("click", () => {
+          const src = audioBtn.getAttribute("data-src");
+          if (!src) {
+            audioBtn.classList.add("audio-empty");
+            audioBtn.title = "尚未錄音";
+            return;
+          }
+          const audio = new Audio(src);
+          audio.play().catch(() => {
+            audioBtn.classList.add("audio-empty");
+            audioBtn.title = "音檔不存在，先用心讀一下罷";
+          });
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

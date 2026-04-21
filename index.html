@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>陈奕迅词典 · Eason Dictionary</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css?v=20260421i">
+</head>
+<body>
+  <header class="cover">
+    <div class="seal">歌</div>
+    <h1 class="title">陳<span class="title-sep">奕</span>迅<span class="title-spacer"></span>詞<span class="title-sep">典</span></h1>
+    <p class="subtitle">E&nbsp;A&nbsp;S&nbsp;O&nbsp;N&nbsp;&nbsp;C&nbsp;H&nbsp;A&nbsp;N&nbsp;&nbsp;D&nbsp;I&nbsp;C&nbsp;T&nbsp;I&nbsp;O&nbsp;N&nbsp;A&nbsp;R&nbsp;Y</p>
+    <p class="byline">林夕、黃偉文以詞為條 · 陳奕迅以聲為注 · Edison 校讎</p>
+    <p class="edition">第一版 · 粵語拼音 · MMXXVI</p>
+  </header>
+
+  <main class="book">
+    <div class="meta-row">
+      <span id="word-count"></span>
+      <span class="meta-tip">點任意詞條 ➜ 詳釋</span>
+    </div>
+
+    <ul id="word-list" class="word-grid"></ul>
+
+    <footer class="colophon">
+      <p>編纂：Edison × AI Edison</p>
+      <p>初版：MMXXVI 春</p>
+      <p class="quote">「我已經 / 給你一切 / 不能比這多」</p>
+      <p class="rights">專輯封面與試聽片段版權歸原作者及唱片公司所有，本站僅作個人學習與愛好用途，無任何商業意圖。</p>
+    </footer>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="audio-previews.js"></script>
+  <script>
+    (function () {
+      const listEl = document.getElementById("word-list");
+      const countEl = document.getElementById("word-count");
+
+      countEl.textContent = `凡 ${SONGS.length} 首`;
+
+      SONGS.forEach((s) => {
+        const lyric = (s.lyrics && s.lyrics[0]) ? s.lyrics[0].line : "";
+        const firstSeg = lyric.split(/\s*\/\s*/)[0] || lyric;
+        const trimmed = firstSeg.length > 30 ? firstSeg.slice(0, 30) + "…" : firstSeg;
+        const cover = `covers/${s.id}.jpg`;
+        const li = document.createElement("li");
+        li.className = "word-card";
+        li.dataset.id = s.id;
+        li.innerHTML = `
+          <a href="word.html?id=${encodeURIComponent(s.id)}">
+            <div class="vinyl-wrap">
+              <div class="vinyl" aria-hidden="true">
+                <div class="vinyl-label" style="background-image: url('${cover}')"></div>
+              </div>
+              <div class="vinyl-play-hint" aria-hidden="true">♪</div>
+            </div>
+            <div class="card-meta-row">
+              <div class="card-jyutping">${s.jyutping}</div>
+              <div class="card-song">${s.song}</div>
+            </div>
+            <p class="card-lyric serif"><span class="quote-mark">「</span>${trimmed}<span class="quote-mark">」</span></p>
+          </a>
+        `;
+        listEl.appendChild(li);
+      });
+
+      // ===== Hover 试听：30 秒 Apple Music 官方片段 =====
+      const audio = new Audio();
+      audio.preload = "none";
+      const TARGET_VOL = 0.65;
+      const FADE_MS = 280;
+      let currentId = null;
+      let fadeTimer = null;
+
+      function clearFade() { if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; } }
+
+      function fadeTo(target, onDone) {
+        clearFade();
+        const start = audio.volume, dv = target - start, t0 = Date.now();
+        fadeTimer = setInterval(() => {
+          const p = Math.min(1, (Date.now() - t0) / FADE_MS);
+          audio.volume = Math.max(0, Math.min(1, start + dv * p));
+          if (p >= 1) { clearFade(); onDone && onDone(); }
+        }, 16);
+      }
+
+      function play(id) {
+        const url = (typeof PREVIEWS !== "undefined") && PREVIEWS[id];
+        if (!url) return;
+        if (currentId === id && !audio.paused) return;
+        currentId = id;
+        try {
+          if (audio.src !== url) {
+            audio.pause();
+            audio.src = url;
+          }
+          audio.currentTime = 0;
+          audio.volume = 0;
+          const p = audio.play();
+          if (p && typeof p.then === "function") {
+            p.then(() => fadeTo(TARGET_VOL)).catch(() => {});
+          }
+        } catch (e) { /* ignore autoplay errors */ }
+      }
+
+      function stop(id) {
+        if (currentId !== id) return;
+        fadeTo(0, () => { audio.pause(); currentId = null; });
+      }
+
+      // 用事件委托：mouseover/mouseout 在 word-grid 上
+      listEl.addEventListener("mouseover", (e) => {
+        const card = e.target.closest(".word-card");
+        if (!card) return;
+        // 防止从子元素移到子元素时反复触发
+        const from = e.relatedTarget;
+        if (from && card.contains(from)) return;
+        play(card.dataset.id);
+      });
+      listEl.addEventListener("mouseout", (e) => {
+        const card = e.target.closest(".word-card");
+        if (!card) return;
+        const to = e.relatedTarget;
+        if (to && card.contains(to)) return;
+        stop(card.dataset.id);
+      });
+
+      // 切换标签页时停掉
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && currentId) stop(currentId);
+      });
+    })();
+  </script>
+</body>
+</html>
