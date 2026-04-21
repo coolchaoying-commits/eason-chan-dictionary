@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>陈奕迅词典 · Eason Dictionary</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="style.css?v=20260421i">
+  <link rel="stylesheet" href="style.css?v=20260421j">
 </head>
 <body>
   <header class="cover">
@@ -20,6 +20,11 @@
     <div class="meta-row">
       <span id="word-count"></span>
       <span class="meta-tip">點任意詞條 ➜ 詳釋</span>
+    </div>
+
+    <div id="audio-unlock" class="audio-unlock" role="button" tabindex="0">
+      <span class="audio-unlock-icon">🔇</span>
+      <span class="audio-unlock-text">點一下任意處 → 啟用「鼠標懸停黑膠 ♪ 試聽 30 秒副歌」</span>
     </div>
 
     <ul id="word-list" class="word-grid"></ul>
@@ -74,6 +79,41 @@
       const FADE_MS = 280;
       let currentId = null;
       let fadeTimer = null;
+      let audioUnlocked = false;
+
+      const unlockEl = document.getElementById("audio-unlock");
+      const unlockTextEl = unlockEl.querySelector(".audio-unlock-text");
+      const unlockIconEl = unlockEl.querySelector(".audio-unlock-icon");
+
+      function showUnlocked() {
+        if (!unlockEl) return;
+        unlockEl.classList.add("unlocked");
+        unlockIconEl.textContent = "🎵";
+        unlockTextEl.textContent = "已啟用 · 鼠標懸停黑膠即可試聽";
+        setTimeout(() => unlockEl.classList.add("fading"), 1800);
+        setTimeout(() => { unlockEl.style.display = "none"; }, 2600);
+      }
+
+      function unlockAudio() {
+        if (audioUnlocked) return;
+        audioUnlocked = true;
+        // 用一段静默触发解锁，确保后续 hover 触发的 play() 能在 sticky activation 内通过
+        try {
+          audio.muted = true;
+          audio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
+          const p = audio.play();
+          if (p && typeof p.then === "function") {
+            p.then(() => { audio.pause(); audio.muted = false; audio.src = ""; })
+             .catch(() => { audio.muted = false; });
+          }
+        } catch (e) { audio.muted = false; }
+        showUnlocked();
+      }
+
+      // 用户首次任何手势（点击 / 键盘 / 触摸）都解锁
+      ["click", "keydown", "touchstart"].forEach((ev) => {
+        document.addEventListener(ev, unlockAudio, { once: true, capture: true });
+      });
 
       function clearFade() { if (fadeTimer) { clearInterval(fadeTimer); fadeTimer = null; } }
 
@@ -99,11 +139,19 @@
           }
           audio.currentTime = 0;
           audio.volume = 0;
+          audio.muted = false;
           const p = audio.play();
           if (p && typeof p.then === "function") {
-            p.then(() => fadeTo(TARGET_VOL)).catch(() => {});
+            p.then(() => fadeTo(TARGET_VOL)).catch((err) => {
+              // autoplay 被拒：高亮提示用户先点页面
+              if (err && (err.name === "NotAllowedError" || err.name === "AbortError")) {
+                if (unlockEl && !audioUnlocked) {
+                  unlockEl.classList.add("attention");
+                }
+              }
+            });
           }
-        } catch (e) { /* ignore autoplay errors */ }
+        } catch (e) { /* ignore */ }
       }
 
       function stop(id) {

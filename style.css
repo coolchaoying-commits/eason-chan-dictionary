@@ -127,6 +127,58 @@ html, body {
 .meta-row .divider { opacity: 0.4; }
 .meta-row .meta-tip { margin-left: auto; font-style: italic; }
 
+/* ============ 試聽解鎖提示 ============ */
+.audio-unlock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: -8px auto 28px;
+  padding: 11px 20px;
+  max-width: 560px;
+  border: 1px dashed var(--accent);
+  border-radius: 999px;
+  background: rgba(201, 100, 66, 0.06);
+  color: var(--accent);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.7s ease, transform 0.7s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+.audio-unlock:hover { background: rgba(201, 100, 66, 0.12); }
+
+.audio-unlock-icon {
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.audio-unlock.attention {
+  animation: unlock-pulse 1.4s ease-in-out infinite;
+  background: rgba(201, 100, 66, 0.15);
+}
+
+@keyframes unlock-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201, 100, 66, 0.45); }
+  50%      { box-shadow: 0 0 0 10px rgba(201, 100, 66, 0); }
+}
+
+.audio-unlock.unlocked {
+  border-style: solid;
+  background: rgba(34, 139, 87, 0.08);
+  border-color: #4a9b6f;
+  color: #2f7a52;
+  animation: none;
+  box-shadow: none;
+}
+
+.audio-unlock.fading {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
 /* ============ 词性分组 ============ */
 .type-section { margin-bottom: 44px; }
 
